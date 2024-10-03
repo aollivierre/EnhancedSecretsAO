@@ -64,6 +64,15 @@ function Download-GitHubReleaseAsset {
     Begin {
         Write-EnhancedLog -Message "Starting Download-GitHubReleaseAsset function" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
+
+        # Check if the destination directory exists, create if it doesn't
+        $destinationDirectory = Split-Path -Path $DestinationPath -Parent
+        if (-not (Test-Path -Path $destinationDirectory)) {
+            Write-EnhancedLog -Message "Destination directory does not exist. Creating directory: $destinationDirectory" -Level "INFO"
+            New-Item -Path $destinationDirectory -ItemType Directory | Out-Null
+        } else {
+            Write-EnhancedLog -Message "Destination directory already exists: $destinationDirectory" -Level "INFO"
+        }
     }
 
     Process {
