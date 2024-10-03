@@ -49,6 +49,11 @@ function Export-KeePassAttachment {
     Begin {
         Write-EnhancedLog -Message "Starting Export-KeePassAttachment function" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
+
+
+        Write-EnhancedLog -Message "Ensuring that KeePass is installed" -Level "Notice"
+        Install-KeePass
+
     }
 
     Process {
@@ -64,8 +69,29 @@ function Export-KeePassAttachment {
                 throw "The key file does not exist: $KeyFilePath"
             }
 
-            # Construct command for KeePassXC CLI
-            $command = "keepassxc-cli attachment-export `"$DatabasePath`" `"$EntryName`" `"$AttachmentName`" `"$ExportPath`" --key-file `"$KeyFilePath`" --no-password"
+            # # Full path to the KeePass CLI executable
+            # $keepassCliPath = "C:\Program Files\KeePassXC\keepassxc-cli.exe"
+
+            # # Build the command with the full path
+            # $command = "`"$keepassCliPath`" attachment-export `"$DatabasePath`" `"$EntryName`" `"$AttachmentName`" `"$ExportPath`" --key-file `"$KeyFilePath`" --no-password"
+
+
+            # List of common paths where KeePassXC CLI might be installed
+            $commonPaths = @(
+                "C:\Program Files\KeePassXC\keepassxc-cli.exe",
+                "C:\Program Files (x86)\KeePassXC\keepassxc-cli.exe"
+            )
+
+            # Find the KeePass CLI path
+            $keepassCliPath = $commonPaths | Where-Object { Test-Path $_ }
+
+            if (-not $keepassCliPath) {
+                throw "KeePassXC CLI not found in common paths."
+            }
+
+            # Build the command with the dynamically located KeePassXC CLI path
+            $command = "`"$keepassCliPath`" attachment-export `"$DatabasePath`" `"$EntryName`" `"$AttachmentName`" `"$ExportPath`" --key-file `"$KeyFilePath`" --no-password"
+
 
             Write-EnhancedLog -Message "Running command: $command" -Level "INFO"
 
