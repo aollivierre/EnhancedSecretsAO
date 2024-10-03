@@ -90,15 +90,62 @@ function Export-KeePassAttachment {
             }
 
             # Build the command with the dynamically located KeePassXC CLI path
-            $command = "`"$keepassCliPath`" attachment-export `"$DatabasePath`" `"$EntryName`" `"$AttachmentName`" `"$ExportPath`" --key-file `"$KeyFilePath`" --no-password"
+            # $command = "`"$keepassCliPath`" attachment-export `"$DatabasePath`" `"$EntryName`" `"$AttachmentName`" `"$ExportPath`" --key-file `"$KeyFilePath`" --no-password"
 
 
-            Write-EnhancedLog -Message "Running command: $command" -Level "INFO"
+            # Write-EnhancedLog -Message "Running command: $command" -Level "INFO"
+
+
+         
 
             # Execute the command
-            Invoke-Expression $command
+            # Invoke-Expression $command
 
-            Write-EnhancedLog -Message "Attachment '$AttachmentName' exported successfully to '$ExportPath'." -Level "INFO"
+
+
+
+            # Build the arguments list for the KeePassXC CLI command
+            # We're using Start-Process instead of Invoke-Expression, so we create a clean argument array
+            $arguments = @(
+                "attachment-export"               # Command to export an attachment from the KeePass database
+                "`"$DatabasePath`""               # Path to the KeePass database file, wrapped in escaped quotes to handle spaces
+                "`"$EntryName`""                  # Entry name within the KeePass database, escaped in quotes
+                "`"$AttachmentName`""             # Name of the attachment to export from the specified entry
+                "`"$ExportPath`""                 # Path where the exported attachment will be saved, escaped in quotes to handle spaces
+                "--key-file"                      # Option to specify the key file for database access
+                "`"$KeyFilePath`""                # Path to the key file used to unlock the KeePass database, escaped in quotes
+                "--no-password"                   # Instruct the CLI to skip prompting for a password since only a key file is used
+            )
+
+
+            # Log the command (for debugging purposes)
+            Write-EnhancedLog -Message "Running command: $keepassCliPath $($arguments -join ' ')" -Level "INFO"
+
+
+            # Wait-Debugger
+
+            # Use Start-Process to execute the command
+            $process = Start-Process -FilePath $keepassCliPath -ArgumentList $arguments -Wait -NoNewWindow -PassThru
+
+            # Check the exit code
+            if ($process.ExitCode -ne 0) {
+                throw "KeePassXC CLI failed with exit code $($process.ExitCode)"
+            }
+
+
+
+            # Check if the file was actually exported
+            if (Test-Path -Path $ExportPath) {
+                Write-EnhancedLog -Message "Attachment '$AttachmentName' exported successfully to '$ExportPath'." -Level "INFO"
+            }
+            else {
+                Write-EnhancedLog -Message "Attachment export failed: '$ExportPath' does not exist." -Level "ERROR"
+                throw "Attachment export failed: '$AttachmentName' not found at '$ExportPath'."
+            }
+
+
+
+            # Write-EnhancedLog -Message "Attachment '$AttachmentName' exported successfully to '$ExportPath'." -Level "INFO"
         }
         catch {
             Write-EnhancedLog -Message "Failed to export attachment: $($_.Exception.Message)" -Level "ERROR"
