@@ -33,6 +33,9 @@ function Zip-Directory {
         Write-EnhancedLog -Message "Starting Zip-Directory function" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
 
+        # Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
+
+
         # Determine the destination directory and create it if necessary
         $destinationDir = Split-Path -Path $ZipFilePath -Parent
         if (-not (Test-Path -Path $destinationDir)) {
@@ -48,9 +51,9 @@ function Zip-Directory {
                 Write-EnhancedLog -Message "Source directory does not exist: $SourceDirectory" -Level "ERROR"
                 throw "Source directory does not exist: $SourceDirectory"
             }
-
-            # Create the zip archive from the directory
-            [System.IO.Compression.ZipFile]::CreateFromDirectory($SourceDirectory, $ZipFilePath, [System.IO.Compression.CompressionLevel]::Optimal, $false)
+    
+            # Use Compress-Archive to zip the directory
+            Compress-Archive -Path "$SourceDirectory\*" -DestinationPath $ZipFilePath -Force
             Write-EnhancedLog -Message "Successfully zipped the directory to: $ZipFilePath" -Level "INFO"
         }
         catch {
@@ -58,6 +61,7 @@ function Zip-Directory {
             throw "Zipping process failed: $($_.Exception.Message)"
         }
     }
+    
 
     End {
         Write-EnhancedLog -Message "Exiting Zip-Directory function" -Level "Notice"
