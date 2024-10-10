@@ -33,13 +33,10 @@ function Zip-Directory {
         Write-EnhancedLog -Message "Starting Zip-Directory function" -Level "Notice"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
 
-        # Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
-
-
         # Determine the destination directory and create it if necessary
         $destinationDir = Split-Path -Path $ZipFilePath -Parent
         if (-not (Test-Path -Path $destinationDir)) {
-            New-Item -Path $destinationDir -ItemType Directory | Out-Null
+            New-Item -Path $destinationDir -ItemType Directory -Force | Out-Null
             Write-EnhancedLog -Message "Created destination directory: $destinationDir" -Level "INFO"
         }
     }
@@ -51,17 +48,42 @@ function Zip-Directory {
                 Write-EnhancedLog -Message "Source directory does not exist: $SourceDirectory" -Level "ERROR"
                 throw "Source directory does not exist: $SourceDirectory"
             }
-    
-            # Use Compress-Archive to zip the directory
-            Compress-Archive -Path "$SourceDirectory\*" -DestinationPath $ZipFilePath -Force
-            Write-EnhancedLog -Message "Successfully zipped the directory to: $ZipFilePath" -Level "INFO"
+
+            # Retry logic to handle file locks or transient issues
+            $maxRetries = 3
+            $retryDelaySeconds = 2
+            $attempt = 0
+            $success = $false
+
+            while ($attempt -lt $maxRetries -and -not $success) {
+                try {
+                    # Attempt to compress the directory
+                    Compress-Archive -Path "$SourceDirectory\*" -DestinationPath $ZipFilePath -Force
+                    Write-EnhancedLog -Message "Successfully zipped the directory to: $ZipFilePath" -Level "INFO"
+                    $success = $true
+                }
+                catch {
+                    $attempt++
+                    Write-EnhancedLog -Message "Attempt $attempt Error during zipping: $($_.Exception.Message)" -Level "WARNING"
+                    if ($attempt -lt $maxRetries) {
+                        Write-EnhancedLog -Message "Retrying in $retryDelaySeconds seconds..." -Level "INFO"
+                        Start-Sleep -Seconds $retryDelaySeconds
+                    }
+                    else {
+                        Write-EnhancedLog -Message "Max retries reached. Zipping process failed." -Level "ERROR"
+                        throw "Zipping process failed after $maxRetries attempts: $($_.Exception.Message)"
+                    }
+                }
+            }
         }
         catch {
+            # Additional error details for troubleshooting
             Write-EnhancedLog -Message "Error during zipping: $($_.Exception.Message)" -Level "ERROR"
+            Write-EnhancedLog -Message "StackTrace: $($_.Exception.StackTrace)" -Level "ERROR"
+            Handle-Error -ErrorRecord $_
             throw "Zipping process failed: $($_.Exception.Message)"
         }
     }
-    
 
     End {
         Write-EnhancedLog -Message "Exiting Zip-Directory function" -Level "Notice"
