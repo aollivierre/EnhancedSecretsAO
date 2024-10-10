@@ -47,6 +47,18 @@ function Upload-GitHubReleaseAsset {
     Begin {
         Write-EnhancedLog -Message "Starting GitHub Asset Upload Script" -Level "NOTICE"
         Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
+
+
+        
+        # Define the URL for the GitHub CLI releases page
+        $githubCLIReleasesUrl = "https://api.github.com/repos/cli/cli/releases/latest"
+
+        # Define the local path to save the installer
+        $installerPath = "$env:TEMP\gh_cli_installer.msi"
+
+        # Example invocation to install GitHub CLI:
+        Install-GitHubCLI -releasesUrl $githubCLIReleasesUrl -installerPath $installerPath
+
     }
 
     Process {
